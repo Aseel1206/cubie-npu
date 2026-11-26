@@ -42,7 +42,7 @@ pip install cubie-npu          # from PyPI, once it is published there
 pip install git+https://github.com/Aseel1206/cubie-npu
 ```
 
-Needs Python 3.8+ and NumPy. Then check everything with:
+Needs Python 3.9+ and NumPy. Then check everything with:
 
 ```bash
 cubie-npu doctor               # SDK found? compiler? driver? builds the shim, prints the driver version
