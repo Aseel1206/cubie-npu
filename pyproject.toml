@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cubie-npu"
+version = "0.1.0"
+description = "Python bindings to run Allwinner A733 (VIPLite) .nb models on the Radxa Cubie A7A NPU"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = ["numpy"]
+authors = [{ name = "Aseel Ahmed" }]
+keywords = ["radxa", "cubie-a7a", "allwinner", "a733", "npu", "viplite", "vivante", "inference", "edge-ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/Aseel1206/cubie-npu"
+Issues = "https://github.com/Aseel1206/cubie-npu/issues"
+
+[project.scripts]
+cubie-npu = "cubie_npu.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cubie_npu = ["_shim.cpp", "py.typed"]

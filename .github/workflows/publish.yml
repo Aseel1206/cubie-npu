@@ -1,0 +1,19 @@
+# Publishes to PyPI when you create a GitHub release. Uses PyPI "trusted publishing" (no API token stored anywhere):
+# register this repo as a trusted publisher for the project on pypi.org first (Account -> Publishing -> add a pending publisher:
+# owner Aseel1206, repository cubie-npu, workflow publish.yml, environment pypi).
+name: publish
+on:
+  release:
+    types: [published]
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install build && python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
