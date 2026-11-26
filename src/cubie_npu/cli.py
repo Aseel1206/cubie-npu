@@ -6,6 +6,8 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("info", help="print the inputs/outputs of a .nb"); s.add_argument("model")
     b = sub.add_parser("bench", help="time a .nb on the NPU (random input)"); b.add_argument("model"); b.add_argument("-n", type=int, default=100)
+    sub.add_parser("gpu-info", help="show the GPU (OpenCL) the gpu helpers would use")
+    gb = sub.add_parser("gpu-bench", help="GPU image ops vs OpenCV on the CPU"); gb.add_argument("-n", type=int, default=30)
     d = sub.add_parser("doctor", help="check the SDK, compiler, driver and (optionally) a model")
     d.add_argument("model", nargs="?")
     a = ap.parse_args(argv)
@@ -17,6 +19,12 @@ def main(argv=None):
                 for t in ts:
                     q = t.quant if t.quant == "none" else "%s (%s)" % (t.quant, "fl=%d" % t.fixed_point_pos if t.quant == "dynamic_fixed_point" else "scale=%g zp=%d" % (t.scale, t.zero_point))
                     print("%-6s %d  %-28s shape %-20s dtype %-8s quant %s  (%d bytes)" % (kind, t.index, t.name, t.shape, t.dtype, q, t.nbytes))
+        elif a.cmd == "gpu-info":
+            from . import gpu
+            for k, v in gpu.info().items(): print("%-16s %s" % (k, v))
+        elif a.cmd == "gpu-bench":
+            from . import gpu
+            from .gpu import _bench; _bench.run(a.n)
         elif a.cmd == "bench":
             m = Model(a.model); r = m.benchmark(a.n)
             print("%s: %d runs  mean %.2f ms  p50 %.2f  p95 %.2f  min %.2f  max %.2f  (%.1f FPS)" % (os.path.basename(a.model), r["runs"], r["mean_ms"], r["p50_ms"], r["p95_ms"], r["min_ms"], r["max_ms"], r["fps"]))

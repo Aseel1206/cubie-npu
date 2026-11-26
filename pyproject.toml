@@ -22,6 +22,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
+[project.optional-dependencies]
+gpu = ["pyopencl"]
+
 [project.urls]
 Homepage = "https://github.com/Aseel1206/cubie-npu"
 Issues = "https://github.com/Aseel1206/cubie-npu/issues"

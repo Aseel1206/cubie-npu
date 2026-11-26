@@ -47,3 +47,21 @@ def test_find_sdk_error_message(monkeypatch, tmp_path):
     monkeypatch.setattr(os.path, "isfile", lambda p: False)
     with pytest.raises(cubie_npu.NPUError, match="CUBIE_NPU_SDK_INCLUDE"):
         _backend.find_sdk()
+
+
+def test_gpu_icd_setup_writes_a_one_line_icd(monkeypatch, tmp_path):
+    from cubie_npu.gpu import _setup
+    lib = tmp_path / "libPVROCL.so"; lib.write_text("x")
+    monkeypatch.delenv("OCL_ICD_VENDORS", raising=False)
+    monkeypatch.setattr(_setup, "_done", False)
+    monkeypatch.setattr(_setup, "find_pvr_library", lambda: str(lib))
+    assert _setup.configure(cache_dir=str(tmp_path / "cache")) == str(lib)
+    d = os.environ["OCL_ICD_VENDORS"]
+    assert open(os.path.join(d, "powervr.icd")).read().strip() == str(lib)
+    monkeypatch.delenv("OCL_ICD_VENDORS")
+
+
+def test_gpu_icd_setup_respects_user_setting(monkeypatch, tmp_path):
+    from cubie_npu.gpu import _setup
+    monkeypatch.setenv("OCL_ICD_VENDORS", str(tmp_path)); monkeypatch.setattr(_setup, "_done", False)
+    assert _setup.configure() is None and os.environ["OCL_ICD_VENDORS"] == str(tmp_path)

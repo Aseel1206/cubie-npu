@@ -112,6 +112,41 @@ In `examples/`. They need the models from my repos (below), plus `opencv-python-
 python examples/hands.py photo.jpg out.png --bench 100
 ```
 
+## GPU helpers (experimental, read this before using)
+
+The board also has a GPU (PowerVR BXM-4-64). `cubie_npu.gpu` makes it usable from Python and has a handful of image functions on it. **My measurements say it does not beat OpenCV on the CPU for these jobs**, so treat it as an experiment, not an optimisation.
+
+```bash
+pip install "cubie-npu[gpu]"      # adds pyopencl
+cubie-npu gpu-info                # the GPU, with the PowerVR OpenCL driver registered for you
+cubie-npu gpu-bench               # GPU vs OpenCV on your board
+```
+
+What is useful here regardless of speed: on the stock image the registered OpenCL driver is Mesa's, which does not drive this GPU, so a plain `pyopencl` finds nothing. `cubie_npu.gpu` registers `/usr/lib/libPVROCL.so` for you (it writes a one-line `.icd` file in `~/.cache/cubie_npu/` and points `OCL_ICD_VENDORS` at it; if you set `OCL_ICD_VENDORS` yourself it is left alone).
+
+```python
+from cubie_npu import gpu
+img = gpu.Image(frame_bgr)                           # upload once; images stay on the GPU between calls
+kp = img.resize((640, 360), "area").to_gray().gaussian_blur(5).fast(threshold=25)   # (N,3): x, y, score
+```
+
+Available on `gpu.Image`: `resize` (bilinear / area), `letterbox`, `swap_rb`, `to_gray`, `normalize` (to float16/float32, NHWC or NCHW), `warp_affine`, `gaussian_blur`, `pyramid`, `sobel`, `fast` (FAST-9 with non-max suppression). Every one is checked against OpenCV in `tests/test_gpu.py` (resize, warp and blur within 1-3 grey levels, Sobel and swap exact, FAST without suppression returns exactly OpenCV's keypoints).
+
+**The measurements** (Cubie A7A, 1280x720 frame, OpenCV pinned to one thread; `cubie-npu gpu-bench` reproduces them):
+
+| task | OpenCV wall / CPU time | GPU wall / CPU time |
+|---|---|---|
+| letterbox 1280x720 -> 224, area filter | 5.4 / 5.3 ms | 10.9 / 2.9 ms |
+| feature front end: resize + gray + blur + FAST | 2.3 / 2.3 ms | 36 / 10 ms |
+| rotated 224x224 crop (warpAffine) | 1.6 / 1.5 ms | 4.5 / 2.8 ms |
+
+- The GPU is small: one compute unit at 600 MHz, about 19 GFLOPS fp32 (36 with fp16 vectors), 4 KiB of local memory, 5 GB/s of memory bandwidth, and slow copies to and from host memory (0.5 to 2.6 GB/s). For scale, the CPU already gets about 36 GFLOPS on a transformer, and the NPU does the same model in 14.5 ms.
+- Good news: while a GPU kernel runs, the CPU really is idle (0.04 ms of CPU over a 15 ms wait), so the idea is sound in principle.
+- Bad news: every operation costs CPU time to enqueue (about 1 ms) and to read back, and OpenCV's NEON code on one A55 core is simply faster than this GPU for resize, colour conversion, blur, warp and FAST.
+- The one place it saved CPU time was the large area-filter downscale (about half the CPU time of OpenCV), at twice the latency.
+- My kernels are not fully tuned. On this GPU wide vector loads matter a lot (a 5-tap blur went from 4.1 ms to 0.6 ms in isolation), and I only applied that to some of them. I do not think it changes the verdict, but I can't prove that.
+- Where the GPU could make sense: your own compute-heavy OpenCL kernels (big, few launches), where `cubie_npu.gpu.info()` and the driver setup save you the trouble. For image preprocessing, use OpenCV.
+
 ## Models that work with it
 
 I converted these for the A733 and wrote up how, including the things that went wrong:
