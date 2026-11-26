@@ -140,7 +140,7 @@ Available on `gpu.Image`: `resize` (bilinear / area), `letterbox`, `swap_rb`, `t
 | feature front end: resize + gray + blur + FAST | 2.3 / 2.3 ms | 36 / 10 ms |
 | rotated 224x224 crop (warpAffine) | 1.6 / 1.5 ms | 4.5 / 2.8 ms |
 
-- The GPU is small: one compute unit at 600 MHz, about 19 GFLOPS fp32 (36 with fp16 vectors), 4 KiB of local memory, 5 GB/s of memory bandwidth, and slow copies to and from host memory (0.5 to 2.6 GB/s). For scale, the CPU already gets about 36 GFLOPS on a transformer, and the NPU does the same model in 14.5 ms.
+- The GPU is small: one compute unit at 600 MHz, about 19 GFLOPS fp32 (36 with fp16 vectors), 4 KiB of local memory, 5 GB/s of memory bandwidth, and slow copies to and from host memory (0.5 to 2.6 GB/s). For scale, my rough estimate is that the CPU manages about as much on a transformer like DeiT-tiny (roughly 36 GFLOPS effective), and the NPU runs that model in 14.5 ms.
 - Good news: while a GPU kernel runs, the CPU really is idle (0.04 ms of CPU over a 15 ms wait), so the idea is sound in principle.
 - Bad news: every operation costs CPU time to enqueue (about 1 ms) and to read back, and OpenCV's NEON code on one A55 core is simply faster than this GPU for resize, colour conversion, blur, warp and FAST.
 - The one place it saved CPU time was the large area-filter downscale (about half the CPU time of OpenCV), at twice the latency.
