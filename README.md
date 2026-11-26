@@ -1,5 +1,7 @@
 # cubie-npu
 
+[![PyPI](https://img.shields.io/pypi/v/cubie-npu)](https://pypi.org/project/cubie-npu/) [![CI](https://github.com/Aseel1206/cubie-npu/actions/workflows/ci.yml/badge.svg)](https://github.com/Aseel1206/cubie-npu/actions/workflows/ci.yml)
+
 Run `.nb` models on the NPU of the Radxa Cubie A7A (Allwinner A733) from Python.
 
 If you have ever looked at the NPU on this board and found that the only way to use it is C or C++, this is for you. You give it a `.nb` file and NumPy arrays, you get NumPy arrays back:
@@ -37,8 +39,8 @@ You also need the NPU kernel driver loaded (`/dev/vipcore` must exist), which it
 ## Install
 
 ```bash
-pip install cubie-npu          # from PyPI, once it is published there
-# or straight from GitHub:
+pip install cubie-npu
+# or the latest from GitHub:
 pip install git+https://github.com/Aseel1206/cubie-npu
 ```
 
