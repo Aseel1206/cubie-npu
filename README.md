@@ -60,11 +60,19 @@ The files live in my per-model repos (conversion details are in each README), so
 
 ## What you need first
 
-cubie-npu does not ship any vendor files, because I can't. It needs **your own copy of the Allwinner VIPLite SDK**: the header `vip_lite.h` and the two libraries `libNBGlinker.so` and `libVIPhal.so`. You already have them if you converted a model for this board: they are in the AWNPU model zoo under `common/npuruntime/include` and `common/npuruntime/lib_linux_aarch64/A733`.
+cubie-npu does not ship any vendor files, because I can't. It needs the Allwinner VIPLite header `vip_lite.h` and the two libraries `libNBGlinker.so` and `libVIPhal.so`. **Check what you already have first**: it looks in the environment variables below, an `awnpu_model_zoo*` folder in your home directory (the files are in `common/npuruntime`), `~/awnn_inference` (Radxa's wrapper, which was on my board), then `/usr/include` + `/usr/lib`. `cubie-npu doctor` tells you what it found.
 
-On first use, cubie-npu compiles a small C++ file (`_shim.cpp`, about 160 lines) against those files, which needs `g++` on the board (`sudo apt install g++`). The result is cached in `~/.cache/cubie_npu/`, so this happens once.
+If it finds nothing:
 
-It looks for the SDK in this order: the environment variables below, an `awnpu_model_zoo*` folder in your home directory, `~/awnn_inference/vendor`, then `/usr/include` + `/usr/lib`.
+```bash
+cubie-npu install-sdk          # asks first, then fetches the four files it needs from Radxa's model-zoo download
+```
+
+That streams Radxa's public archive (`https://dl.radxa.com/cubie/allwinner-model-zoo.tar.gz`, about 200 MB, never stored) and keeps only `vip_lite.h`, `vip_lite_common.h` and the A733 `libVIPhal.so` / `libNBGlinker.so` in `~/.cache/cubie_npu/sdk`. They are Allwinner's files; your board downloads them from Radxa, cubie-npu does not redistribute them, and the command shows that notice and waits for a yes (`-y` skips it). `--from model-zoo.tar.gz` or `--from unpacked_folder/` installs from a copy you already have, for example one from the Allwinner portal.
+
+One caution: the runtime libraries should match your board's NPU kernel driver. The ones in that mirror are model zoo v0.9.0 (the newer v1.0.0 on the Radxa docs page is only on the Allwinner portal). I tested cubie-npu with the libraries already on my board, not yet with these downloaded ones, and I have not tried them against other board images. If the NPU misbehaves after `install-sdk`, prefer the libraries that came with your image.
+
+On first use, cubie-npu compiles a small C++ file (`_shim.cpp`, about 160 lines) against those files, which needs `g++` on the board (`sudo apt install g++`). The result is cached in `~/.cache/cubie_npu/`, so this happens once. To point at your own copy instead:
 
 ```bash
 export CUBIE_NPU_SDK_INCLUDE=/path/to/dir/with/vip_lite.h

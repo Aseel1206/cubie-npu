@@ -26,6 +26,11 @@ def _cache_dir():
     return d
 
 
+def sdk_dir():
+    """Where `cubie-npu install-sdk` puts the files it extracts."""
+    return os.path.join(_cache_dir(), "sdk")
+
+
 def find_sdk():
     """Return (include_dir, lib_dir) of the VIPLite SDK, or raise NPUError with instructions.
 
@@ -41,15 +46,18 @@ def find_sdk():
         for l in ("lib_linux_aarch64/A733", "lib_linux_aarch64"):
             cand.append((os.path.join(zoo, "include"), os.path.join(zoo, l)))
     cand.append((os.path.join(home, "awnn_inference", "vendor", "include"), os.path.join(home, "awnn_inference", "vendor", "lib")))
+    cand.append((os.path.join(home, "awnn_inference", "include"), os.path.join(home, "awnn_inference", "install", "lib")))
     cand.append(("/usr/include", "/usr/lib"))
     cand.append(("/usr/local/include", "/usr/local/lib"))
+    cand.append((os.path.join(sdk_dir(), "include"), os.path.join(sdk_dir(), "lib")))      # filled by `cubie-npu install-sdk`; last, so files already on the board win
     for i, l in cand:
         if os.path.isfile(os.path.join(i, "vip_lite.h")) and os.path.isfile(os.path.join(l, "libNBGlinker.so")) and os.path.isfile(os.path.join(l, "libVIPhal.so")):
             return i, l
     raise NPUError(
         "VIPLite SDK not found. cubie-npu needs the Allwinner header vip_lite.h and the libraries libNBGlinker.so + libVIPhal.so "
         "(from the AWNPU model zoo: common/npuruntime/include and common/npuruntime/lib_linux_aarch64/A733). "
-        "Point to them with CUBIE_NPU_SDK_INCLUDE=<dir with vip_lite.h> and CUBIE_NPU_SDK_LIB=<dir with the .so files>.")
+        "Run `cubie-npu install-sdk` to fetch them from Radxa's model zoo, or point to your own copy with "
+        "CUBIE_NPU_SDK_INCLUDE=<dir with vip_lite.h> and CUBIE_NPU_SDK_LIB=<dir with the .so files>.")
 
 
 def build_shim(force=False, verbose=False):

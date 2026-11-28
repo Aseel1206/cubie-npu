@@ -51,12 +51,24 @@ def main(argv=None):
     ru = sub.add_parser("run", help="run a task on an image: classify | depth | hands | faces"); ru.add_argument("task", choices=["classify", "depth", "hands", "faces"])
     ru.add_argument("image"); ru.add_argument("-o", "--out", help="save the annotated image / depth map here"); ru.add_argument("--variant")
     ch = sub.add_parser("chat", help="chat with SmolLM2-135M on the NPU"); ch.add_argument("--temperature", type=float, default=0.7); ch.add_argument("--max-new", type=int, default=120)
+    ins = sub.add_parser("install-sdk", help="fetch the Allwinner VIPLite header + libraries from Radxa's model zoo (only if not already on the board)")
+    ins.add_argument("--from", dest="source", help="URL, model-zoo .tar.gz, or unpacked model-zoo folder (default: Radxa's download)"); ins.add_argument("-y", "--yes", action="store_true")
     sub.add_parser("setup-gpu", help="check the GPU/OpenCL/Vulkan setup and print the steps that are missing")
     sub.add_parser("gpu-info", help="show the GPU (OpenCL) the gpu helpers would use")
     gb = sub.add_parser("gpu-bench", help="GPU image ops vs OpenCV on the CPU"); gb.add_argument("-n", type=int, default=30)
     d = sub.add_parser("doctor", help="check the SDK, compiler, driver and (optionally) a model")
     d.add_argument("model", nargs="?")
     a = ap.parse_args(argv)
+    if a.cmd == "install-sdk":
+        from . import _sdk, _backend
+        try:
+            _backend.find_sdk(); print("an SDK is already available, nothing to install:", *_backend.find_sdk()); return 0
+        except _backend.NPUError:
+            pass
+        try:
+            _sdk.install(a.source, assume_yes=a.yes); print("now run: cubie-npu doctor"); return 0
+        except (_backend.NPUError, OSError) as e:
+            print("error:", e, file=sys.stderr); return 1
     if a.cmd in ("models", "pull", "run", "chat", "setup-gpu"):
         return _hub_cmd(a)
     from . import Model, NPUError, find_sdk, build_shim, driver_version, __version__
