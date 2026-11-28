@@ -52,7 +52,7 @@ cubie-npu chat                           # SmolLM2 chat in the terminal
 |---|---|---|---|
 | `deit-tiny` | image-classification | 7 MB | ImageNet-1k, 14.5 ms |
 | `mediapipe-hands` | hand-landmarks | 3 MB | palm detector + 21 landmarks |
-| `blazeface` | face-detection | 0.2 MB | int16 only (int8 misses the face). The box decoding is the standard MediaPipe one but I have not yet checked it on the board |
+| `blazeface` | face-detection | 0.2 MB | int16 only (int8 misses the face). Short-range model: the face should fill a good part of the frame (about a fifth of the width or more); small faces in a wide photo are missed |
 | `depth-anything-v2-small` | depth-estimation | 35 MB | fixed 252x336 input, 255 ms |
 | `smollm2-135m` | text-generation | 337 MB | 128-token context, about 21 tokens/s |
 
@@ -185,7 +185,7 @@ What it checks, in the order things usually go wrong:
    clinfo | head
    ```
 
-**Vulkan:** `cubie_npu.gpu` does not use it, it is OpenCL only. `setup-gpu` still reports the Vulkan loader and whether a PowerVR Vulkan driver and its ICD file are installed, because that is a separate vendor package that not every image has, and Mesa's Vulkan drivers do not drive this GPU. I have not been able to run Vulkan on this board myself, so I can not give you tested steps for it beyond what `setup-gpu` prints.
+**Vulkan:** `cubie_npu.gpu` does not use it, it is OpenCL only, but Vulkan is there too. On the stock image the PowerVR Vulkan driver (`/usr/lib/libVK_IMG.so`, registered through `/usr/share/vulkan/icd.d/img_icd.json`) is already installed, and `vulkaninfo --summary` lists `PowerVR B-Series BXM-4-64 MC1` with Vulkan 1.3 next to a software `llvmpipe` device. If you need it: `sudo apt install libvulkan1 vulkan-tools`, then `vulkaninfo --summary | grep deviceName`. `cubie-npu setup-gpu` runs that check and, if the PowerVR device is missing, prints the ICD file to create or the `VK_ICD_FILENAMES` override to try. I only confirmed that the device shows up; I have not run any Vulkan compute workload on it (ncnn, kompute and the like).
 
 What is useful here regardless of speed: on the stock image the registered OpenCL driver is Mesa's, which does not drive this GPU, so a plain `pyopencl` finds nothing. `cubie_npu.gpu` registers `/usr/lib/libPVROCL.so` for you (it writes a one-line `.icd` file in `~/.cache/cubie_npu/` and points `OCL_ICD_VENDORS` at it; if you set `OCL_ICD_VENDORS` yourself it is left alone).
 

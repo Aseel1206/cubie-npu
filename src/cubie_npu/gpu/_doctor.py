@@ -1,7 +1,7 @@
 """`cubie-npu setup-gpu`: look at what is installed for the Cubie A7A's GPU and print the exact steps that are still missing.
 
-The helpers in cubie_npu.gpu use OpenCL (libPVROCL.so). Vulkan is only reported, not used, because the PowerVR Vulkan driver
-is a separate vendor package that not every image ships.
+The helpers in cubie_npu.gpu use OpenCL (libPVROCL.so). Vulkan (libVK_IMG.so) is checked and reported too, for your own Vulkan code,
+but cubie_npu.gpu does not use it.
 """
 import glob, grp, os, shutil, sys
 
@@ -21,6 +21,29 @@ def _find(patterns):
     for pat in patterns:
         out += glob.glob(pat)
     return sorted(set(out))
+
+
+def _vulkan():
+    """Vulkan is not used by cubie_npu.gpu (OpenCL is), but it is part of 'is my GPU set up', so check it for real with vulkaninfo."""
+    import subprocess
+    vk_loader = _find(["/usr/lib/aarch64-linux-gnu/libvulkan.so*", "/usr/lib/libvulkan.so*"])
+    vk_pvr = _find(["/usr/lib/libVK_IMG*", "/usr/lib/aarch64-linux-gnu/libVK_IMG*"])
+    icds = [p for d in _VK_ICD_DIRS for p in glob.glob(d + "/*.json")]
+    if not vk_loader or not shutil.which("vulkaninfo"):
+        return [("info", "Vulkan tools missing", "", "sudo apt install libvulkan1 vulkan-tools")]
+    try:
+        out = subprocess.run(["vulkaninfo", "--summary"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True, timeout=30).stdout
+    except Exception as e:
+        return [("info", "vulkaninfo failed", str(e), "")]
+    devs = [l.split("=", 1)[1].strip() for l in out.splitlines() if l.strip().startswith("deviceName")]
+    ver = [l.split("(", 1)[-1].rstrip(") ") for l in out.splitlines() if l.strip().startswith("apiVersion")]
+    if any("powervr" in d.lower() for d in devs):
+        return [("ok", "Vulkan sees the GPU", "; ".join(devs) + (" (Vulkan %s)" % ver[0] if ver else ""), "")]
+    fix = ("echo '{\"file_format_version\":\"1.0.0\",\"ICD\":{\"library_path\":\"%s\",\"api_version\":\"1.3.277\"}}' | sudo tee /usr/share/vulkan/icd.d/img_icd.json\n"
+           "vulkaninfo --summary | grep deviceName" % vk_pvr[0]) if vk_pvr and not any("img" in os.path.basename(i).lower() for i in icds) else \
+          ("PowerVR Vulkan driver (libVK_IMG.so) not found: it comes with the Radxa image's GPU packages; update the image or install them" if not vk_pvr else
+           "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/img_icd.json vulkaninfo --summary   # if this lists the GPU, export that variable")
+    return [("warn", "Vulkan does not list the PowerVR GPU", "devices seen: " + (", ".join(devs) or "none"), fix)]
 
 
 def diagnose():
@@ -67,21 +90,7 @@ def diagnose():
         except Exception as e:
             r.append(("fail", "OpenCL cannot open the GPU", str(e).splitlines()[0] if str(e) else type(e).__name__,
                       "clinfo | head -20    # with OCL_ICD_VENDORS set as above; if it lists 0 platforms the kernel driver is not running"))
-    vk_loader = _find(["/usr/lib/aarch64-linux-gnu/libvulkan.so*", "/usr/lib/libvulkan.so*"])
-    vk_icds = [p for d in _VK_ICD_DIRS for p in glob.glob(d + "/*.json")]
-    vk_pvr = _find(["/usr/lib/libVK_IMG*", "/usr/lib/aarch64-linux-gnu/libVK_IMG*", "/usr/lib/*/libvulkan_powervr*", "/usr/lib/libvulkan_powervr*", "/usr/lib/libvulkan_pvr*"])
-    if vk_loader:
-        r.append(("info", "Vulkan loader", vk_loader[0], ""))
-    else:
-        r.append(("info", "Vulkan loader missing", "", "sudo apt install libvulkan1 vulkan-tools   # only if you want to use Vulkan from your own code"))
-    if vk_pvr:
-        r.append(("info", "PowerVR Vulkan driver", ", ".join(vk_pvr), ""))
-        if not any("pvr" in os.path.basename(p).lower() or "img" in os.path.basename(p).lower() for p in vk_icds):
-            r.append(("info", "no Vulkan ICD file for it", "", "echo '{\"file_format_version\":\"1.0.0\",\"ICD\":{\"library_path\":\"%s\",\"api_version\":\"1.3.0\"}}' | sudo tee /usr/share/vulkan/icd.d/powervr_icd.json\n"
-                      "vulkaninfo --summary    # check that the GPU shows up" % vk_pvr[0]))
-    else:
-        r.append(("info", "no PowerVR Vulkan driver found", "Mesa's Vulkan drivers do not drive this GPU. cubie-npu's GPU helpers do not need Vulkan (they use OpenCL).",
-                  "ls /usr/share/vulkan/icd.d    # whatever is listed there is what vulkaninfo will try"))
+    r += _vulkan()
     return r
 
 
@@ -89,7 +98,7 @@ def report(file=None):
     f = file or sys.stdout; marks = {"ok": "[ ok ]", "warn": "[warn]", "fail": "[FAIL]", "info": "[ .. ]"}; bad = 0
     for st, title, detail, fix in diagnose():
         print("%s %s%s" % (marks[st], title, ("  -  " + detail.replace("\n", "\n         ")) if detail else ""), file=f)
-        if fix and st in ("fail", "info"):
+        if fix and st in ("fail", "info", "warn"):
             print("       how:  " + fix.replace("\n", "\n             "), file=f)
         bad += st == "fail"
     print("\n" + ("Everything needed for cubie_npu.gpu is in place." if not bad else "%d thing(s) to fix above; run this again afterwards." % bad), file=f)
