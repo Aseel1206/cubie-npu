@@ -26,7 +26,7 @@ This is an unofficial community project. I tested it on a Cubie A7A only (Debian
 You do not have to find the `.nb` files yourself. `pipeline()` downloads the model on first use (checksum-verified, cached in `~/.cache/cubie_npu/models`), loads it onto the NPU, and takes a normal image: a file path, a URL, a NumPy array or a PIL image.
 
 ```bash
-pip install "cubie-npu[vision]"          # adds OpenCV for reading/resizing images ("[llm]" adds tokenizers for the chat, "[all]" everything)
+pip install "cubie-npu[vision]"          # adds OpenCV for reading/resizing images ("[llm]" adds tokenizers for the chat, "[gpu]" adds pyopencl for the experimental GPU helpers, "[all]" everything). A word on the GPU part: in my measurements it did not give better results than OpenCV on the CPU, so the NPU pipelines do not use it; see "GPU helpers" below
 ```
 
 ```python
