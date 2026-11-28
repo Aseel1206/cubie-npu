@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cubie-npu"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python bindings to run Allwinner A733 (VIPLite) .nb models on the Radxa Cubie A7A NPU"
 readme = "README.md"
 license = { text = "MIT" }
@@ -24,6 +24,9 @@ classifiers = [
 
 [project.optional-dependencies]
 gpu = ["pyopencl"]
+vision = ["opencv-python-headless"]
+llm = ["tokenizers"]
+all = ["pyopencl", "opencv-python-headless", "tokenizers"]
 
 [project.urls]
 Homepage = "https://github.com/Aseel1206/cubie-npu"
@@ -36,4 +39,4 @@ cubie-npu = "cubie_npu.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-cubie_npu = ["_shim.cpp", "py.typed"]
+cubie_npu = ["_shim.cpp", "py.typed", "data/*.json"]

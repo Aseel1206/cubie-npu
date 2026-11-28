@@ -1,0 +1,166 @@
+{
+ "models": {
+  "deit-tiny": {
+   "task": "image-classification",
+   "description": "DeiT-tiny, ImageNet-1k, 224x224",
+   "repo": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-deit-tiny",
+   "variants": {
+    "int8": {
+     "nb": "deit_tiny_int8pcq.nb"
+    },
+    "int16": {
+     "nb": "deit_tiny_int16.nb"
+    }
+   },
+   "default": "int8",
+   "files": [
+    {
+     "name": "deit_tiny_int8pcq.nb",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-deit-tiny/main/models/deit_tiny_int8pcq.nb",
+     "sha256": "0666c11325be6fdd01d97fd71d02d471116ef70d402cf9ea01c645a00367cbb4",
+     "size": 7091672
+    },
+    {
+     "name": "deit_tiny_int16.nb",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-deit-tiny/main/models/deit_tiny_int16.nb",
+     "sha256": "8863f18fa44260d7ccf007dce5366da740ade95cceb358db404f27fddb94453a",
+     "size": 11951416
+    },
+    {
+     "name": "config.json",
+     "url": "https://huggingface.co/facebook/deit-tiny-patch16-224/resolve/main/config.json",
+     "sha256": null,
+     "size": null
+    }
+   ]
+  },
+  "depth-anything-v2-small": {
+   "task": "depth-estimation",
+   "description": "Depth Anything V2 small, fixed 252x336 input",
+   "repo": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-depth-anything-v2",
+   "variants": {
+    "int8": {
+     "nb": "da_small_int8pcq.nb"
+    },
+    "int16": {
+     "nb": "da_small_int16.nb"
+    }
+   },
+   "default": "int8",
+   "files": [
+    {
+     "name": "da_small_int8pcq.nb",
+     "url": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-depth-anything-v2/releases/download/v1.0/da_small_int8pcq.nb",
+     "sha256": "e1bb72691e64a19a1e3dda99580b21b94741b533ff9de3f87d6a510d6f59f66a",
+     "size": 35168024
+    },
+    {
+     "name": "da_small_int16.nb",
+     "url": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-depth-anything-v2/releases/download/v1.0/da_small_int16.nb",
+     "sha256": "c4e42f393de9f8f6312728e3aa9b0c3d1cf3db87397f20dba847200b8c5c731d",
+     "size": 57939560
+    }
+   ]
+  },
+  "mediapipe-hands": {
+   "task": "hand-landmarks",
+   "description": "MediaPipe palm detector + 21-point hand landmarks",
+   "repo": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-mediapipe-hands",
+   "variants": {
+    "int8": {
+     "palm": "palm_detector_int8pcq.nb",
+     "landmark": "hand_landmark_int8pcq.nb"
+    },
+    "int16": {
+     "palm": "palm_detector_int8pcq.nb",
+     "landmark": "hand_landmark_int16.nb"
+    }
+   },
+   "default": "int8",
+   "files": [
+    {
+     "name": "palm_detector_int8pcq.nb",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-mediapipe-hands/main/models/palm_detector_int8pcq.nb",
+     "sha256": "a6e77148df5e8cc6aeb579cf3b44386498d1098540d408e3b5b2601c831984ce",
+     "size": 1248368
+    },
+    {
+     "name": "hand_landmark_int8pcq.nb",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-mediapipe-hands/main/models/hand_landmark_int8pcq.nb",
+     "sha256": "8f89e833fbc0c788c33f22b5aec4f899ede3f8f7b1d4d5abce10d27ac65a6953",
+     "size": 1931984
+    },
+    {
+     "name": "hand_landmark_int16.nb",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-mediapipe-hands/main/models/hand_landmark_int16.nb",
+     "sha256": "07f8146fcc1d4e696eed5ab44b5f02823f8f111ab8a6d4f3e427bbab46619c31",
+     "size": 3333312
+    }
+   ]
+  },
+  "blazeface": {
+   "task": "face-detection",
+   "description": "MediaPipe BlazeFace short-range, 128x128 (int16 only: int8 misses the face)",
+   "repo": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-blazeface",
+   "variants": {
+    "int16": {
+     "nb": "blazeface_short_int16.nb"
+    }
+   },
+   "default": "int16",
+   "files": [
+    {
+     "name": "blazeface_short_int16.nb",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-blazeface/main/models/blazeface_short_int16.nb",
+     "sha256": "88bacdeaa97501a2c5699414a104f34e8e219a24f380f104d617caead243507f",
+     "size": 241944
+    }
+   ]
+  },
+  "smollm2-135m": {
+   "task": "text-generation",
+   "description": "SmolLM2-135M-Instruct, 128-token context, int16",
+   "repo": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-llm-smollm2-135m",
+   "variants": {
+    "int16": {
+     "nb": "smollm2_135m_c128_int16.nb"
+    }
+   },
+   "default": "int16",
+   "files": [
+    {
+     "name": "smollm2_135m_c128_int16.nb",
+     "url": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-llm-smollm2-135m/releases/download/v1.0/smollm2_135m_c128_int16.nb",
+     "sha256": "37e7a277e97287cef9ed7786d68bf4d97f2d5f5bf19e01b6565a3351b75cc328",
+     "size": 223157808
+    },
+    {
+     "name": "embed.f32",
+     "url": "https://github.com/Aseel1206/radxa-cubie-a7a-npu-llm-smollm2-135m/releases/download/v1.0/embed.f32",
+     "sha256": "99d5936a7c7d5d021c2ee186608a1a6c07635344e2be6aeccb3dc7ee1ecbbf90",
+     "size": 113246208
+    },
+    {
+     "name": "prefix.bin",
+     "url": "https://raw.githubusercontent.com/Aseel1206/radxa-cubie-a7a-npu-llm-smollm2-135m/main/models/prefix.bin",
+     "sha256": "5ae3d44393e9481e562d677b9937267a913eab4a321f7762f96a39808544a123",
+     "size": 645124
+    },
+    {
+     "name": "tokenizer.json",
+     "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct/resolve/main/tokenizer.json",
+     "sha256": null,
+     "size": null
+    }
+   ]
+  }
+ },
+ "aliases": {
+  "image-classification": "deit-tiny",
+  "depth-estimation": "depth-anything-v2-small",
+  "hand-landmarks": "mediapipe-hands",
+  "hand-tracking": "mediapipe-hands",
+  "face-detection": "blazeface",
+  "text-generation": "smollm2-135m"
+ }
+}

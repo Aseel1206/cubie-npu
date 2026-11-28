@@ -1,16 +1,64 @@
 import argparse, json, os, shutil, sys
 
 
+def _hub_cmd(a):
+    from . import hub, pipeline
+    if a.cmd == "models":
+        print("%-26s %-20s %-10s %8s  %s" % ("model", "task", "variants", "download", "cached"))
+        for m in hub.list_models():
+            print("%-26s %-20s %-10s %6.1f MB  %s" % (m["name"], m["task"], "/".join(m["variants"]), m["size_mb"], "yes" if m["cached"] else "-"))
+        print("\ncache:", hub.cache_dir())
+    elif a.cmd == "pull":
+        for k, p in hub.pull(a.model, a.variant, progress=True).items(): print("%-18s %s" % (k, p))
+    elif a.cmd == "setup-gpu":
+        from .gpu import _doctor
+        return 1 if _doctor.report() else 0
+    elif a.cmd == "chat":
+        bot = pipeline("text-generation")
+        print("SmolLM2-135M on the NPU - context %d tokens. /reset starts over, /quit leaves." % bot.CTX)
+        while True:
+            try: u = input("you> ").strip()
+            except (EOFError, KeyboardInterrupt): print(); break
+            if u == "/quit": break
+            if u == "/reset": bot.reset(); print("[reset]"); continue
+            if not u: continue
+            print("bot> ", end="", flush=True)
+            for piece in bot(u, a.max_new, a.temperature, stream=True): print(piece, end="", flush=True)
+            print("\n   [%.1f tok/s, context %d/%d]" % (bot.last_tokens_per_s, bot.pos, bot.CTX))
+    else:
+        import numpy as np
+        from ._image import load_image, _cv2
+        cv2 = _cv2(); task = {"classify": "image-classification", "depth": "depth-estimation", "hands": "hand-landmarks", "faces": "face-detection"}[a.task]
+        pipe = pipeline(task, variant=a.variant); im = load_image(a.image); r = pipe(im)
+        if a.task == "classify":
+            for x in r: print("%5.1f%%  %s" % (x["score"] * 100, x["label"]))
+        else:
+            from . import _viz
+            out = _viz.draw(task, im, r)
+            if a.task == "depth": print("depth range %.3f .. %.3f" % (r["depth"].min(), r["depth"].max()))
+            else: print("%d found" % len(r))
+            if a.out: cv2.imwrite(a.out, out[..., ::-1]); print("wrote", a.out)
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="cubie-npu", description="Tools for running .nb models on the Cubie A7A NPU")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("info", help="print the inputs/outputs of a .nb"); s.add_argument("model")
     b = sub.add_parser("bench", help="time a .nb on the NPU (random input)"); b.add_argument("model"); b.add_argument("-n", type=int, default=100)
+    sub.add_parser("models", help="list the models you can download, and which are cached")
+    pl = sub.add_parser("pull", help="download a model into the cache"); pl.add_argument("model"); pl.add_argument("--variant")
+    ru = sub.add_parser("run", help="run a task on an image: classify | depth | hands | faces"); ru.add_argument("task", choices=["classify", "depth", "hands", "faces"])
+    ru.add_argument("image"); ru.add_argument("-o", "--out", help="save the annotated image / depth map here"); ru.add_argument("--variant")
+    ch = sub.add_parser("chat", help="chat with SmolLM2-135M on the NPU"); ch.add_argument("--temperature", type=float, default=0.7); ch.add_argument("--max-new", type=int, default=120)
+    sub.add_parser("setup-gpu", help="check the GPU/OpenCL/Vulkan setup and print the steps that are missing")
     sub.add_parser("gpu-info", help="show the GPU (OpenCL) the gpu helpers would use")
     gb = sub.add_parser("gpu-bench", help="GPU image ops vs OpenCV on the CPU"); gb.add_argument("-n", type=int, default=30)
     d = sub.add_parser("doctor", help="check the SDK, compiler, driver and (optionally) a model")
     d.add_argument("model", nargs="?")
     a = ap.parse_args(argv)
+    if a.cmd in ("models", "pull", "run", "chat", "setup-gpu"):
+        return _hub_cmd(a)
     from . import Model, NPUError, find_sdk, build_shim, driver_version, __version__
     try:
         if a.cmd == "info":

@@ -21,6 +21,43 @@ It is a thin layer over the public VIPLite C API (the same one the vendor tools 
 
 This is an unofficial community project. I tested it on a Cubie A7A only (Debian 11, kernel 5.15.147-a733, VIPLite driver 2.0.3.2). Other Allwinner chips that use the same VIPLite runtime might work. I have not tried.
 
+## Download a model and run it on a picture
+
+You do not have to find the `.nb` files yourself. `pipeline()` downloads the model on first use (checksum-verified, cached in `~/.cache/cubie_npu/models`), loads it onto the NPU, and takes a normal image: a file path, a URL, a NumPy array or a PIL image.
+
+```bash
+pip install "cubie-npu[vision]"          # adds OpenCV for reading/resizing images ("[llm]" adds tokenizers for the chat, "[all]" everything)
+```
+
+```python
+from cubie_npu import pipeline
+
+pipeline("image-classification")("cat.jpg")                  # [{'label': 'tabby, tabby cat', 'score': 0.6}, ...]
+pipeline("hand-landmarks")("https://example.com/hand.jpg")   # [{'landmarks': (21, 2) px, 'score', 'presence', 'roi'}]
+pipeline("face-detection")(pil_image)                        # [{'box': (x0, y0, x1, y1), 'keypoints': (6, 2), 'score'}]
+d = pipeline("depth-estimation")("room.jpg")                 # d["depth"] float32 at the image size, d["image"] a colour map
+chat = pipeline("text-generation"); chat("Tell me a joke")   # keeps the conversation; chat.reset() starts over
+```
+
+Images are RGB. A NumPy array is taken as RGB, so from OpenCV pass `frame[..., ::-1]`. Pass `variant="int16"` for the slower, more accurate build where there is one. The same from the shell:
+
+```bash
+cubie-npu models                         # what can be downloaded, sizes, what is cached
+cubie-npu pull mediapipe-hands           # download only
+cubie-npu run hands photo.jpg -o out.png # also: classify, depth, faces
+cubie-npu chat                           # SmolLM2 chat in the terminal
+```
+
+| name | task | download | notes |
+|---|---|---|---|
+| `deit-tiny` | image-classification | 7 MB | ImageNet-1k, 14.5 ms |
+| `mediapipe-hands` | hand-landmarks | 3 MB | palm detector + 21 landmarks |
+| `blazeface` | face-detection | 0.2 MB | int16 only (int8 misses the face). The box decoding is the standard MediaPipe one but I have not yet checked it on the board |
+| `depth-anything-v2-small` | depth-estimation | 35 MB | fixed 252x336 input, 255 ms |
+| `smollm2-135m` | text-generation | 337 MB | 128-token context, about 21 tokens/s |
+
+The files live in my per-model repos (conversion details are in each README), so those repos are the source of truth. `CUBIE_NPU_OFFLINE=1` stops it from using the network; `CUBIE_NPU_CACHE` moves the cache. Your own `.nb` files still work with `Model("x.nb")` as before.
+
 ## What you need first
 
 cubie-npu does not ship any vendor files, because I can't. It needs **your own copy of the Allwinner VIPLite SDK**: the header `vip_lite.h` and the two libraries `libNBGlinker.so` and `libVIPhal.so`. You already have them if you converted a model for this board: they are in the AWNPU model zoo under `common/npuruntime/include` and `common/npuruntime/lib_linux_aarch64/A733`.
@@ -121,6 +158,26 @@ pip install "cubie-npu[gpu]"      # adds pyopencl
 cubie-npu gpu-info                # the GPU, with the PowerVR OpenCL driver registered for you
 cubie-npu gpu-bench               # GPU vs OpenCV on your board
 ```
+
+### Setting up the GPU (OpenCL, and what about Vulkan)
+
+```bash
+cubie-npu setup-gpu          # checks everything below and prints the commands for whatever is missing
+```
+
+What it checks, in the order things usually go wrong:
+
+1. **The kernel driver**: `/dev/dri/renderD128` exists (`lsmod | grep pvr` shows `pvrsrvkm`). If your user is not in the `render`/`video` groups: `sudo usermod -aG render,video $USER`, then log in again.
+2. **The PowerVR OpenCL driver**: `/usr/lib/libPVROCL.so` (it was already there on the Radxa image I tested). If it lives elsewhere: `export CUBIE_NPU_OCL_LIB=/path/to/libPVROCL.so`.
+3. **The OpenCL loader and Python side**: `sudo apt install ocl-icd-libopencl1 ocl-icd-opencl-dev clinfo build-essential python3-dev`, then `pip install "cubie-npu[gpu]"`.
+4. **Registration**: nothing to do for `cubie_npu.gpu`, it registers the driver itself. For other programs (`clinfo`, your own pyopencl code) do it by hand once per shell:
+   ```bash
+   mkdir -p ~/ocl_icd && echo /usr/lib/libPVROCL.so > ~/ocl_icd/powervr.icd
+   export OCL_ICD_VENDORS=~/ocl_icd
+   clinfo | head
+   ```
+
+**Vulkan:** `cubie_npu.gpu` does not use it, it is OpenCL only. `setup-gpu` still reports the Vulkan loader and whether a PowerVR Vulkan driver and its ICD file are installed, because that is a separate vendor package that not every image has, and Mesa's Vulkan drivers do not drive this GPU. I have not been able to run Vulkan on this board myself, so I can not give you tested steps for it beyond what `setup-gpu` prints.
 
 What is useful here regardless of speed: on the stock image the registered OpenCL driver is Mesa's, which does not drive this GPU, so a plain `pyopencl` finds nothing. `cubie_npu.gpu` registers `/usr/lib/libPVROCL.so` for you (it writes a one-line `.icd` file in `~/.cache/cubie_npu/` and points `OCL_ICD_VENDORS` at it; if you set `OCL_ICD_VENDORS` yourself it is left alone).
 
